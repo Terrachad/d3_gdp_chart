@@ -6,22 +6,156 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Document</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.2/d3.min.js" integrity="sha512-oKI0pS1ut+mxQZdqnD3w9fqArLyILRsT3Dx0B+8RVEXzEk3aNK3J3pWlaGJ8MtTs1oiwyXDAH6hG6jy1sY0YqA==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <style>
+        .container{
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+            margin: 0;
+            vertical-align:middle;
+            justify-self: center;
+        }
+        svg{
+            background-color: aliceblue;
+        }
+    </style>
 </head>
 <body>
-    <div class="container">
-        <h1 id="main">FDD</h1>
-    </div>
+    <div class="container"></div>
     <script>
-        var gdpJson;
+        //declarations
+        let url = 'https://raw.githubusercontent.com/freeCodeCamp/ProjectReferenceData/master/GDP-data.json';
+        
+        let heightScale;
+        let xScale;
+        let xAxisScale
+        let yScale;
+        let yAxisScale;
+
+        let width = 800;
+        let height = 600;
+        let margin = 40;
+        let maxGDP;
+        let min;
+        let length;
+        let datesArray;
+
+        d3.select('.container').append('svg')
+
+        var svg = d3.select('svg')
+
+        svg.append('text').attr('id','title').text('USA GDP').attr('color','black').attr('x', 380).attr('y','200')
+
+        const drawTheCanvas = () =>{
+            svg.attr('width', width).attr('height', height)
+        }
+
+        const setScale = (inputdata) =>{
+
+            datesArray = inputdata.map((item) => {return new Date(item[0])})
+
+
+            heightScale = d3.scaleLinear()
+                            .domain([0,maxGDP])
+                            .range([0, height - margin * 2])
+            
+            xScale = d3.scaleLinear()
+                       .domain([0, length])
+                       .range([margin, width - margin])
+
+            
+            xAxisScale = d3.scaleTime()
+                        .domain([d3.min(datesArray),d3.max(datesArray)])
+                        .range([margin, width - margin])
+
+            yAxisScale = d3.scaleLinear()
+                        .domain([0, maxGDP])
+                        .range([height - margin, margin])
+        }
+
+        const getValues = (inputdata) =>{
+            maxGDP = d3.max(inputdata, (item) => {return item[1]})
+            min = d3.min(inputdata, (item) => {return item[1]})
+            length = inputdata.length - 1;
+            console.log(maxGDP)
+        }
+
+        const drawSticks = (inputdata) =>{
+
+            let tooltip = d3.select('body')
+                            .append('div')
+                            .attr('id','tooltip')
+                            .style('visibility','hidden')
+                            .style('width','auto')
+                            .style('height','auto')
+
+
+            svg.selectAll('rect')
+                .data(inputdata)
+                .enter()
+                .append('rect')
+                .attr('class','bar')
+                .attr('width', (width - 2 * margin) / length  )
+                .attr('data-date',(item => {return item[0]}))
+                .attr('data-gdp', (item)=> {return item[1]})
+                .attr('height', (item) => {
+                    return heightScale(item[1])
+                })
+                .attr('x', (item, index) =>{
+                    return xScale(index);
+                })
+                .attr('y', (item) => {
+                    return (height - margin) - heightScale(item[1]);
+                })
+                .on('mouseover',(event,item) => {
+                    tooltip
+                    .transition()
+                    .style('visibility','visible')
+
+                    tooltip.text(item[0])
+                    document.querySelector('#tooltip').setAttribute('data-date',item[0])
+
+                })
+                .on('mouseout', (item)=>{
+                    tooltip
+                    .transition()
+                    .style('visibility','hidden');
+                })
+
+        }
+
+        const setAxis = () =>{
+            let xAxis = d3.axisBottom(xAxisScale);
+            svg.append("g").call(xAxis).attr('id','x-axis').attr('transform',`translate(0,${height - margin})`);
+        
+            let yAxis = d3.axisLeft(yAxisScale);
+            svg.append('g').call(yAxis).attr('id','y-axis').attr('transform',`translate(${margin}, 0)`);
+        
+        }
+
+        function buildTheGraph(inputdata){
+            getValues(inputdata);
+            drawTheCanvas(inputdata);
+            setScale(inputdata);
+            setAxis();
+            drawSticks(inputdata);
+        }
+
+        
+
+        function fetchTheData(){
+            fetch(url)
+            .then((res) => res.json())
+            .then((res) => res.data)
+            .then((res) => buildTheGraph(res))
+            //.then((data) => buildTheGraph(data))
+
+        }
+
 
         addEventListener('DOMContentLoaded', (event) => {
-            fetch('https://raw.githubusercontent.com/freeCodeCamp/ProjectReferenceData/master/GDP-data.json')
-            .then((res) => res.json())
-            .then((data) => gdpJson = data)
-            .then(dgpJson => d3.select('#main').text(JSON.stringify(gdpJson)))
-           
-           
-            
+            fetchTheData();
         });
 
         
